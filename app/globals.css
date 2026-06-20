@@ -2,25 +2,114 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
+  --sidebar: #f6f8fa;
+  --sidebar-border: #e1e4e8;
+  --tab-active: #ffffff;
+  --tab-inactive: #f6f8fa;
+  --tab-border: #e1e4e8;
+  --border: #e1e4e8;
+  --accent: #0969da;
+  --accent-hover: #0550ae;
+  --muted: #6e7781;
+  --code-bg: #f6f8fa;
+  --status-bar: #f6f8fa;
+  --log-timestamp: #6e7781;
+}
+
+.dark {
+  --background: #0d1117;
+  --foreground: #c9d1d9;
+  --sidebar: #161b22;
+  --sidebar-border: #30363d;
+  --tab-active: #0d1117;
+  --tab-inactive: #161b22;
+  --tab-border: #30363d;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --muted: #8b949e;
+  --code-bg: #161b22;
+  --status-bar: #161b22;
+  --log-timestamp: #8b949e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-tab-active: var(--tab-active);
+  --color-tab-inactive: var(--tab-inactive);
+  --color-tab-border: var(--tab-border);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-muted: var(--muted);
+  --color-code-bg: var(--code-bg);
+  --color-status-bar: var(--status-bar);
+  --color-log-timestamp: var(--log-timestamp);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.markdown-body {
+  line-height: 1.6;
+}
+
+.markdown-body h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  color: var(--foreground);
+}
+
+.markdown-body h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--foreground);
+}
+
+.markdown-body h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+}
+
+.markdown-body p {
+  margin-bottom: 1rem;
+  color: var(--foreground);
+}
+
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body strong {
+  font-weight: 600;
 }
