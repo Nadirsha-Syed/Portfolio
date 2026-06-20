@@ -11,10 +11,17 @@ import { Files, Search, Settings } from 'lucide-react'
 
 const initialFiles: FileNode[] = [
   {
-    id: 'home',
-    name: 'home.md',
+    id: 'readme',
+    name: 'readme.md',
     type: 'file',
-    path: 'home.md',
+    path: 'readme.md',
+    extension: 'md'
+  },
+  {
+    id: 'ideas',
+    name: 'ideas.md',
+    type: 'file',
+    path: 'ideas.md',
     extension: 'md'
   },
   {
@@ -58,7 +65,7 @@ const initialFiles: FileNode[] = [
 export default function Home() {
   const [activeFile, setActiveFile] = useState<FileNode | null>(initialFiles[0])
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: 'home', name: 'home.md', path: 'home.md', isActive: true }
+    { id: 'readme', name: 'readme.md', path: 'readme.md', isActive: true }
   ])
   const [logs, setLogs] = useState<LogEntry[]>([
     { timestamp: '23:47:57', message: 'VITE v5.2.11 ready in 184 ms', type: 'info' },

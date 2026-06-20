@@ -277,35 +277,72 @@ export function WorkspaceViewer({ activeFile }: WorkspaceViewerProps) {
 
 function getFileContent(path: string): string {
   const contentMap: Record<string, string> = {
-    'home.md': `# Syed Nadirsha
+    'readme.md': `# Syed Nadirsha
 
-## About Me
+Systems-focused Full Stack Developer
 
-I am a B.Tech Computer Science Engineering (Data Science) student at SR University, Warangal, passionate about Full Stack Development, Problem Solving, and building real-world software products. I enjoy developing scalable web applications using the MERN stack and continuously improving my Data Structures & Algorithms skills in Java.
+Currently pursuing B.Tech in Computer Science (Data Science) at SR University, Warangal.
 
-My goal is to secure opportunities at top technology companies by combining strong software development skills with practical project experience.
+I enjoy building software for real-world ecosystems where technology, trust, and operations intersect. My primary focus is full-stack development using React, Node.js, Express, and MongoDB, while continuously strengthening my problem-solving skills through Java and Data Structures & Algorithms.
 
----
+## Current Focus
 
-## Technical Skills
+* Building RentalHub — a rental ecosystem platform
+* Learning scalable backend architecture
+* Improving DSA and interview preparation in Java
+* Exploring systems that solve local Indian problems
 
-- **Languages**: Java, JavaScript, Python, SQL
-- **Frontend**: HTML5, CSS3, React.js
-- **Backend**: Node.js, Express.js, REST APIs, MVC Architecture
-- **Databases**: MongoDB, Firebase / Cloud Firestore
-- **Cloud & Tools**: AWS Basics, Git, GitHub, Postman, VS Code, Vercel
+## Building
 
----
+### RentalHub
 
-# Ideas & Future Products
+A full-stack rental platform focused on booking workflows, role-based access, and conflict prevention.
 
-- **Smart Bachat App**: AI-powered household budget advisor for Indian families.
-- **Jan Seva AI**: Voice-powered civic complaint redressal platform using AI and NLP.
-- **Aushadhi Sahayak**: Medicine availability finder with real-time pharmacy stock information.
-- **Kisaan AI Advisor**: Regional-language AI assistant for farmers.
-- **Nari Suraksha App**: AI-powered women safety platform.
-- **EduBridge**: Tutor-student matching platform for Tier-2 and Tier-3 cities.
-- **SmartMandir**: Temple booking and livestream platform.`,
+### SmartGrocer
+
+A digital commerce platform designed around the needs of local Indian kirana stores.
+
+## Interests
+
+* Backend Systems
+* System Design
+* Product Development
+* AI-Assisted Workflows
+* Local Commerce Infrastructure
+
+## Looking For
+
+Software Engineering Internships and opportunities to contribute to real-world products while continuing to grow as a full-stack developer.`,
+
+    'ideas.md': `# Future Product Ideas
+
+## Smart Bachat App
+
+AI-powered household budget advisor for Indian families.
+
+## Jan Seva AI
+
+Voice-powered civic complaint platform using NLP and AI.
+
+## Aushadhi Sahayak
+
+Medicine availability finder with real-time pharmacy inventory.
+
+## Kisaan AI Advisor
+
+Regional-language AI assistant for farmers.
+
+## Nari Suraksha
+
+Safety platform with AI-assisted emergency features.
+
+## EduBridge
+
+Tutor-student matching platform for Tier-2 and Tier-3 cities.
+
+## SmartMandir
+
+Temple booking and livestream platform.`,
 
     'education_&_leadership.tsx': `interface LeadershipNode {
   role: string;
