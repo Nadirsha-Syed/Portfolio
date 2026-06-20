@@ -297,14 +297,6 @@ My goal is to secure opportunities at top technology companies by combining stro
 
 ---
 
-# Upcoming Projects
-
-- **Integrity & Execution Dashboard v2.0**: Enhanced accountability triggers.
-- **SmartBachat App Integration**: Adding AI recommendation services.
-- \`---will add soon---\`
-
----
-
 # Ideas & Future Products
 
 - **Smart Bachat App**: AI-powered household budget advisor for Indian families.
