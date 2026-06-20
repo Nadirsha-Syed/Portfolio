@@ -297,11 +297,6 @@ I enjoy building software for real-world ecosystems where technology, trust, and
 ### RentalHub
 
 A full-stack rental platform focused on booking workflows, role-based access, and conflict prevention.
-
-### SmartGrocer
-
-A digital commerce platform designed around the needs of local Indian kirana stores.
-
 ## Interests
 
 * Backend Systems
