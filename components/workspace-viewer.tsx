@@ -330,19 +330,7 @@ Medicine availability finder with real-time pharmacy inventory.
 
 ## Kisaan AI Advisor
 
-Regional-language AI assistant for farmers.
-
-## Nari Suraksha
-
-Safety platform with AI-assisted emergency features.
-
-## EduBridge
-
-Tutor-student matching platform for Tier-2 and Tier-3 cities.
-
-## SmartMandir
-
-Temple booking and livestream platform.`,
+Regional-language AI assistant for farmers.`,
 
     'education_&_leadership.tsx': `interface LeadershipNode {
   role: string;
