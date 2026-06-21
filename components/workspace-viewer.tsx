@@ -200,8 +200,8 @@ export function WorkspaceViewer({ activeFile, fontSize = 14 }: WorkspaceViewerPr
                 <span>•</span>
                 <span>2024 - 2028 (Expected)</span>
               </div>
-              <h3 className="text-lg font-bold font-mono">B.Tech – Computer Science Engineering (Data Science)</h3>
-              <h4 className="text-sm font-semibold font-mono text-muted-foreground">SR University, Warangal</h4>
+              <h3 className="text-base sm:text-lg font-bold font-mono">B.Tech – Computer Science Engineering (Data Science)</h3>
+              <h4 className="text-xs sm:text-sm font-semibold font-mono text-muted-foreground">SR University, Warangal</h4>
               
               <p className="text-sm text-muted font-sans mt-2">
                 Acquiring core engineering skills in data-centric systems and artificial intelligence. Practicing algorithm design in Java.
@@ -239,8 +239,8 @@ export function WorkspaceViewer({ activeFile, fontSize = 14 }: WorkspaceViewerPr
                 <span>•</span>
                 <span>Active</span>
               </div>
-              <h3 className="text-lg font-bold font-mono">Vice Chair – Data Science Club</h3>
-              <h4 className="text-sm font-semibold font-mono text-muted-foreground">Strategic Coordination</h4>
+              <h3 className="text-base sm:text-lg font-bold font-mono">Vice Chair – Data Science Club</h3>
+              <h4 className="text-xs sm:text-sm font-semibold font-mono text-muted-foreground">Strategic Coordination</h4>
               
               <ul className="list-disc pl-5 mt-2 space-y-1.5 text-sm font-sans text-muted">
                 <li><strong>Strategic Coordination:</strong> Supported planning and coordination of data science activities.</li>
@@ -269,7 +269,7 @@ export function WorkspaceViewer({ activeFile, fontSize = 14 }: WorkspaceViewerPr
         {getIcon()}
         <span className="font-mono text-sm text-muted">{activeFile.name}</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ fontSize: `${fontSize}px` }}>
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6" style={{ fontSize: `${fontSize}px` }}>
         {renderContent()}
       </div>
     </div>

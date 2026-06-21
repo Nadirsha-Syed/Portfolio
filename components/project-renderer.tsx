@@ -170,8 +170,8 @@ export function ProjectRenderer({ fileName, fontSize = 14 }: ProjectRendererProp
       <div className="border-b border-border pb-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-[280px]">
-            <h1 className="text-2xl font-bold font-mono mb-2">{project.name}</h1>
-            <p className="text-muted font-sans leading-relaxed text-sm">{project.description}</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-mono mb-2">{project.name}</h1>
+            <p className="text-muted font-sans leading-relaxed text-xs sm:text-sm">{project.description}</p>
           </div>
           {project.liveUrl && (
             <a

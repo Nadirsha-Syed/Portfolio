@@ -96,10 +96,11 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [fontSize, setFontSize] = useState(14)
 
-  // Initialize sidebar state on mount based on screen width
+  // Initialize sidebar state and font-size on mount based on screen width
   useEffect(() => {
     if (window.innerWidth < 640) {
       setIsSidebarOpen(false)
+      setFontSize(12)
     }
   }, [])
 
