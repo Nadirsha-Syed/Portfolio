@@ -78,9 +78,10 @@ function EnvVarRow({ envKey, envVal, isLink, href, icon }: EnvVarRowProps) {
 
 interface WorkspaceViewerProps {
   activeFile: FileNode | null
+  fontSize?: number
 }
 
-export function WorkspaceViewer({ activeFile }: WorkspaceViewerProps) {
+export function WorkspaceViewer({ activeFile, fontSize = 14 }: WorkspaceViewerProps) {
   if (!activeFile) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted">
@@ -102,7 +103,7 @@ export function WorkspaceViewer({ activeFile }: WorkspaceViewerProps) {
 
   const renderContent = () => {
     if (activeFile.extension === 'json' && activeFile.path.includes('projects')) {
-      return <ProjectRenderer fileName={activeFile.name} />
+      return <ProjectRenderer fileName={activeFile.name} fontSize={fontSize} />
     }
 
     if (activeFile.extension === 'md') {
@@ -186,10 +187,10 @@ export function WorkspaceViewer({ activeFile }: WorkspaceViewerProps) {
 
     if (activeFile.path === 'education_&_leadership.tsx') {
       return (
-        <div className="relative border-l border-border pl-6 ml-4 space-y-8 my-4">
+        <div className="relative border-l border-border pl-4 sm:pl-6 ml-2 sm:ml-4 space-y-8 my-4">
           {/* Education Node */}
           <div className="relative">
-            <div className="absolute -left-[33px] top-1.5 w-4 h-4 rounded-full border border-accent bg-background flex items-center justify-center">
+            <div className="absolute -left-[25px] sm:-left-[33px] top-1.5 w-4 h-4 rounded-full border border-accent bg-background flex items-center justify-center">
               <div className="w-1.5 h-1.5 rounded-full bg-accent" />
             </div>
             
@@ -228,7 +229,7 @@ export function WorkspaceViewer({ activeFile }: WorkspaceViewerProps) {
 
           {/* Leadership Node */}
           <div className="relative">
-            <div className="absolute -left-[33px] top-1.5 w-4 h-4 rounded-full border border-purple-500 bg-background flex items-center justify-center">
+            <div className="absolute -left-[25px] sm:-left-[33px] top-1.5 w-4 h-4 rounded-full border border-purple-500 bg-background flex items-center justify-center">
               <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
             </div>
             
@@ -268,7 +269,7 @@ export function WorkspaceViewer({ activeFile }: WorkspaceViewerProps) {
         {getIcon()}
         <span className="font-mono text-sm text-muted">{activeFile.name}</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6" style={{ fontSize: `${fontSize}px` }}>
         {renderContent()}
       </div>
     </div>

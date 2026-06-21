@@ -7,7 +7,9 @@ import { TabBar } from '@/components/tab-bar'
 import { WorkspaceViewer } from '@/components/workspace-viewer'
 import { StatusBar } from '@/components/status-bar'
 import { CommandPalette } from '@/components/command-palette'
-import { Files, Search, Settings } from 'lucide-react'
+import { Files, Search, Settings, Smartphone } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { cn } from '@/lib/utils'
 
 const initialFiles: FileNode[] = [
   {
@@ -63,7 +65,22 @@ const initialFiles: FileNode[] = [
 ]
 
 export default function Home() {
+  const { theme, setTheme } = useTheme()
   const [activeFile, setActiveFile] = useState<FileNode | null>(initialFiles[0])
+  const [showRotatePrompt, setShowRotatePrompt] = useState(false)
+  const [dismissedPrompt, setDismissedPrompt] = useState(false)
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth
+      const isMobileSize = window.innerWidth < 768
+      setShowRotatePrompt(isPortrait && isMobileSize)
+    }
+
+    checkOrientation()
+    window.addEventListener('resize', checkOrientation)
+    return () => window.removeEventListener('resize', checkOrientation)
+  }, [])
   const [tabs, setTabs] = useState<Tab[]>([
     { id: 'readme', name: 'readme.md', path: 'readme.md', isActive: true }
   ])
@@ -76,6 +93,23 @@ export default function Home() {
   ])
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [fontSize, setFontSize] = useState(14)
+
+  // Initialize sidebar state on mount based on screen width
+  useEffect(() => {
+    if (window.innerWidth < 640) {
+      setIsSidebarOpen(false)
+    }
+  }, [])
+
+  // Close settings dropdown on click outside
+  useEffect(() => {
+    if (!isSettingsOpen) return
+    const handleClick = () => setIsSettingsOpen(false)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [isSettingsOpen])
 
   // Listen for Ctrl+K
   useEffect(() => {
@@ -159,7 +193,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden">
       {/* Top Header */}
       <header className="flex items-center justify-between px-4 py-1.5 bg-sidebar border-b border-border text-xs font-mono">
         <div className="flex items-center gap-3">
@@ -190,31 +224,121 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className={`p-2 rounded hover:bg-code-bg transition-colors \${isSidebarOpen ? 'text-accent' : 'text-muted'}`}
+              className={cn(
+                "p-2 rounded hover:bg-code-bg transition-colors cursor-pointer flex items-center justify-center",
+                isSidebarOpen ? 'text-accent' : 'text-muted'
+              )}
             >
               <Files className="w-5 h-5" />
             </button>
-            <button className="p-2 rounded hover:bg-code-bg transition-colors text-muted">
-              <Search className="w-5 h-5" onClick={() => setIsCommandPaletteOpen(true)} />
+            <button 
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="p-2 rounded hover:bg-code-bg transition-colors text-muted cursor-pointer flex items-center justify-center"
+            >
+              <Search className="w-5 h-5" />
             </button>
           </div>
-          <button className="p-2 rounded hover:bg-code-bg transition-colors text-muted">
-            <Settings className="w-5 h-5" />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsSettingsOpen(!isSettingsOpen)
+              }}
+              className={cn(
+                "p-2 rounded hover:bg-code-bg transition-colors text-muted cursor-pointer flex items-center justify-center",
+                isSettingsOpen && "text-accent bg-code-bg"
+              )}
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+            {isSettingsOpen && (
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="absolute left-14 bottom-0 w-56 bg-sidebar border border-border rounded-lg shadow-xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150"
+              >
+                <div className="text-[10px] font-mono font-semibold text-muted px-3 py-1 border-b border-border uppercase tracking-wider mb-1">
+                  Preferences
+                </div>
+                <button 
+                  onClick={() => {
+                    setTheme(theme === 'dark' ? 'light' : 'dark')
+                    setIsSettingsOpen(false)
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-mono rounded hover:bg-code-bg transition-colors flex items-center justify-between text-foreground cursor-pointer"
+                >
+                  <span>Toggle Theme</span>
+                  <span className="text-[10px] text-muted uppercase">{theme || 'system'}</span>
+                </button>
+                <div className="border-t border-border/50 my-1" />
+                <div className="px-3 py-1 text-xs font-mono flex items-center justify-between text-foreground">
+                  <span>Font Size</span>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => setFontSize(prev => Math.max(12, prev - 1))}
+                      className="w-5 h-5 flex items-center justify-center border border-border rounded hover:bg-code-bg cursor-pointer"
+                      title="Decrease Font Size"
+                    >
+                      -
+                    </button>
+                    <span className="min-w-[16px] text-center">{fontSize}px</span>
+                    <button 
+                      onClick={() => setFontSize(prev => Math.min(20, prev + 1))}
+                      className="w-5 h-5 flex items-center justify-center border border-border rounded hover:bg-code-bg cursor-pointer"
+                      title="Increase Font Size"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="border-t border-border/50 my-1" />
+                <button 
+                  onClick={() => {
+                    setLogs([])
+                    setIsSettingsOpen(false)
+                    const time = new Date().toTimeString().split(' ')[0]
+                    setLogs([{ timestamp: time, message: 'Terminal console logs cleared.', type: 'info' }])
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-mono rounded hover:bg-code-bg transition-colors text-red-500 hover:text-red-400 cursor-pointer"
+                >
+                  Clear Console Logs
+                </button>
+              </div>
+            )}
+          </div>
         </aside>
 
-        {/* Sidebar file tree */}
+        {/* Click-away backdrop overlay for mobile sidebar */}
         {isSidebarOpen && (
-          <aside className="w-64 bg-sidebar border-r border-border flex flex-col">
-            <div className="flex-1 overflow-y-auto flex flex-col">
-              <FileTree 
-                nodes={initialFiles}
-                activeFile={activeFile ? activeFile.path : null}
-                onFileSelect={handleFileSelect}
-              />
-            </div>
-          </aside>
+          <div 
+            className="sm:hidden fixed inset-0 z-30 bg-background/20 backdrop-blur-xs cursor-pointer"
+            onClick={() => setIsSidebarOpen(false)}
+          />
         )}
+
+        {/* Sidebar file tree */}
+        <aside className={cn(
+          "w-64 bg-sidebar border-r border-border flex flex-col transition-all duration-200",
+          // Mobile responsive overlay positioning
+          "max-sm:fixed max-sm:left-12 max-sm:top-[31px] max-sm:bottom-[108px] max-sm:z-40 max-sm:shadow-2xl",
+          // Open/Close transition classes
+          isSidebarOpen 
+            ? "max-sm:translate-x-0 sm:w-64" 
+            : "max-sm:-translate-x-full sm:w-0 sm:overflow-hidden sm:border-r-0"
+        )}>
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            <FileTree 
+              nodes={initialFiles}
+              activeFile={activeFile ? activeFile.path : null}
+              onFileSelect={(node) => {
+                handleFileSelect(node)
+                // Close sidebar overlay automatically when selecting a file on mobile
+                if (window.innerWidth < 640) {
+                  setIsSidebarOpen(false)
+                }
+              }}
+            />
+          </div>
+        </aside>
 
         {/* Main Editor Area */}
         <main className="flex-1 flex flex-col overflow-hidden bg-background">
@@ -224,7 +348,7 @@ export default function Home() {
             onTabSelect={handleTabSelect}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
-            <WorkspaceViewer activeFile={activeFile} />
+            <WorkspaceViewer activeFile={activeFile} fontSize={fontSize} />
           </div>
           <StatusBar logs={logs} />
         </main>
@@ -237,6 +361,28 @@ export default function Home() {
         files={initialFiles}
         onSelectFile={handleFileSelect}
       />
+
+      {showRotatePrompt && !dismissedPrompt && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-background/95 backdrop-blur-md text-center">
+          <div className="max-w-xs space-y-6">
+            <div className="relative inline-block p-6 bg-sidebar border border-border rounded-full shadow-inner">
+              <Smartphone className="w-16 h-16 text-accent animate-phone-rotate" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold font-mono">Rotate Your Device</h2>
+              <p className="text-xs text-muted font-sans leading-relaxed">
+                This simulated developer workstation is best experienced in **landscape mode**. Please tilt your screen to align the workspace components.
+              </p>
+            </div>
+            <button
+              onClick={() => setDismissedPrompt(true)}
+              className="px-4 py-2 border border-border bg-sidebar hover:bg-sidebar-border/50 text-xs font-mono text-muted hover:text-foreground rounded transition-colors cursor-pointer w-full"
+            >
+              Dismiss & view anyway
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

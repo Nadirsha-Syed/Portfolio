@@ -124,9 +124,10 @@ interface TestResult {
 
 interface ProjectRendererProps {
   fileName: string
+  fontSize?: number
 }
 
-export function ProjectRenderer({ fileName }: ProjectRendererProps) {
+export function ProjectRenderer({ fileName, fontSize = 14 }: ProjectRendererProps) {
   const project = projects[fileName]
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['overview', 'architecture', 'features', 'responsibilities', 'results', 'teamwork', 'highlights'])
@@ -165,7 +166,7 @@ export function ProjectRenderer({ fileName }: ProjectRendererProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ fontSize: `${fontSize}px` }}>
       <div className="border-b border-border pb-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-[280px]">
