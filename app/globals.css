@@ -34,6 +34,12 @@
   --log-timestamp: #8b949e;
 }
 
+@media (max-width: 767px) {
+  :root {
+    font-size: 11px;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
