@@ -275,18 +275,27 @@ export default function Home() {
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault()
     setNewProjectError('')
-    if (!newProjectFileName.trim()) return
-
-    let cleanName = newProjectFileName.trim()
-    if (!cleanName.endsWith('.json')) {
-      cleanName += '.json'
-    }
-
-    const baseName = cleanName.replace('.json', '')
-    if (!/^[a-zA-Z0-9_-]+$/.test(baseName)) {
-      setNewProjectError('Invalid characters. Use alphanumeric, dash or underscore only.')
+    
+    // Sanitize input: remove all whitespace
+    let sanitizedInput = newProjectFileName.replace(/\s+/g, '')
+    if (!sanitizedInput) {
+      setNewProjectError('File name cannot be empty')
       return
     }
+
+    // Strip .json suffix if present to check base name
+    if (sanitizedInput.endsWith('.json')) {
+      sanitizedInput = sanitizedInput.slice(0, -5)
+    }
+
+    // Clean up base name: keep only alphanumeric, dash, and underscore
+    const baseName = sanitizedInput.replace(/[^a-zA-Z0-9_-]/g, '')
+    if (!baseName) {
+      setNewProjectError('Invalid characters. Must contain alphanumeric, dash or underscore.')
+      return
+    }
+
+    const cleanName = baseName + '.json'
 
     const defaultProj = {
       name: baseName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Platform',

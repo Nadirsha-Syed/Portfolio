@@ -32,9 +32,25 @@ export async function POST(request: Request) {
     }
 
     const { fileName, projectData } = await request.json()
-    if (!fileName || !fileName.endsWith('.json')) {
-      return NextResponse.json({ success: false, error: 'Invalid file name. Must be a .json file.' }, { status: 400 })
+    if (!fileName) {
+      return NextResponse.json({ success: false, error: 'File name is required.' }, { status: 400 })
     }
+
+    // Sanitize input: remove all whitespace
+    let sanitizedInput = fileName.replace(/\s+/g, '')
+    if (sanitizedInput.endsWith('.json')) {
+      sanitizedInput = sanitizedInput.slice(0, -5)
+    }
+
+    // Keep only alphanumeric, dash, and underscore
+    const baseName = sanitizedInput.replace(/[^a-zA-Z0-9_-]/g, '')
+    if (!baseName) {
+      return NextResponse.json({ success: false, error: 'Invalid file name. Must contain alphanumeric, dash or underscore.' }, { status: 400 })
+    }
+
+    const cleanName = baseName + '.json'
+    const filePath = `projects/${cleanName}`
+    const fileId = baseName
 
     const db = readDb()
     const projectsDir = db.files.find(f => f.id === 'projects')
@@ -42,9 +58,6 @@ export async function POST(request: Request) {
     if (!projectsDir || !projectsDir.children) {
       return NextResponse.json({ success: false, error: 'Projects directory not found in file tree' }, { status: 500 })
     }
-
-    const filePath = `projects/${fileName}`
-    const fileId = fileName.replace('.json', '')
 
     // Check if duplicate
     const exists = projectsDir.children.some(child => child.path === filePath)
@@ -55,7 +68,7 @@ export async function POST(request: Request) {
     // Add node
     projectsDir.children.push({
       id: fileId,
-      name: fileName,
+      name: cleanName,
       type: 'file',
       path: filePath,
       extension: 'json'
