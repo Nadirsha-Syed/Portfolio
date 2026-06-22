@@ -7,83 +7,38 @@ import { TabBar } from '@/components/tab-bar'
 import { WorkspaceViewer } from '@/components/workspace-viewer'
 import { StatusBar } from '@/components/status-bar'
 import { CommandPalette } from '@/components/command-palette'
-import { Files, Search, Settings, Smartphone } from 'lucide-react'
+import { Files, Search, Settings, Smartphone, Shield, X, AlertTriangle } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 
-const initialFiles: FileNode[] = [
-  {
-    id: 'readme',
-    name: 'readme.md',
-    type: 'file',
-    path: 'readme.md',
-    extension: 'md'
-  },
-  {
-    id: 'ideas',
-    name: 'ideas.md',
-    type: 'file',
-    path: 'ideas.md',
-    extension: 'md'
-  },
-  {
-    id: 'projects',
-    name: 'projects',
-    type: 'directory',
-    path: 'projects',
-    children: [
-      {
-        id: 'vehicle_rental',
-        name: 'vehicle_rental.json',
-        type: 'file',
-        path: 'projects/vehicle_rental.json',
-        extension: 'json'
-      },
-      {
-        id: 'integrity_execution',
-        name: 'integrity_execution.json',
-        type: 'file',
-        path: 'projects/integrity_execution.json',
-        extension: 'json'
-      }
-    ]
-  },
-  {
-    id: 'education_&_leadership',
-    name: 'education_&_leadership.tsx',
-    type: 'file',
-    path: 'education_&_leadership.tsx',
-    extension: 'tsx'
-  },
-  {
-    id: 'contact',
-    name: 'contact.env',
-    type: 'file',
-    path: 'contact.env',
-    extension: 'env'
-  }
-]
-
 export default function Home() {
   const { theme, setTheme } = useTheme()
-  const [activeFile, setActiveFile] = useState<FileNode | null>(initialFiles[0])
+  
+  // Workspace Dynamic States
+  const [files, setFiles] = useState<FileNode[]>([])
+  const [contentMap, setContentMap] = useState<Record<string, string>>({})
+  const [originalContentMap, setOriginalContentMap] = useState<Record<string, string>>({})
+  const [activeFile, setActiveFile] = useState<FileNode | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  
+  // Admin State
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Modals
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [adminPassword, setAdminPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+
+  const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false)
+  const [newProjectFileName, setNewProjectFileName] = useState('')
+  const [newProjectError, setNewProjectError] = useState('')
+
   const [showRotatePrompt, setShowRotatePrompt] = useState(false)
   const [dismissedPrompt, setDismissedPrompt] = useState(false)
 
-  useEffect(() => {
-    const checkOrientation = () => {
-      const isPortrait = window.innerHeight > window.innerWidth
-      const isMobileSize = window.innerWidth < 768
-      setShowRotatePrompt(isPortrait && isMobileSize)
-    }
-
-    checkOrientation()
-    window.addEventListener('resize', checkOrientation)
-    return () => window.removeEventListener('resize', checkOrientation)
-  }, [])
-  const [tabs, setTabs] = useState<Tab[]>([
-    { id: 'readme', name: 'readme.md', path: 'readme.md', isActive: true }
-  ])
+  const [tabs, setTabs] = useState<Tab[]>([])
   const [logs, setLogs] = useState<LogEntry[]>([
     { timestamp: '23:47:57', message: 'VITE v5.2.11 ready in 184 ms', type: 'info' },
     { timestamp: '23:47:58', message: '[mongodb] connected successfully to cluster0', type: 'success' },
@@ -96,7 +51,55 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [fontSize, setFontSize] = useState(14)
 
-  // Initialize sidebar state and font-size on mount based on screen width
+  // Fetch Workspace Assets on Mount
+  useEffect(() => {
+    const fetchWorkspace = async () => {
+      try {
+        const res = await fetch('/api/files')
+        const json = await res.json()
+        if (json.success) {
+          setFiles(json.data.files)
+          setContentMap(json.data.contents)
+          setOriginalContentMap(json.data.contents)
+          
+          if (json.data.files.length > 0) {
+            const firstFile = json.data.files[0]
+            setActiveFile(firstFile)
+            setTabs([{ id: firstFile.id, name: firstFile.name, path: firstFile.path, isActive: true }])
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load portfolio workspace', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchWorkspace()
+
+    // Restore Admin Authentication
+    const savedIsAdmin = sessionStorage.getItem('isAdmin') === 'true'
+    const savedToken = sessionStorage.getItem('admin_token')
+    if (savedIsAdmin && savedToken) {
+      setIsAdmin(true)
+      setToken(savedToken)
+    }
+  }, [])
+
+  // Handle Mobile Orientation Checks
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth
+      const isMobileSize = window.innerWidth < 768
+      setShowRotatePrompt(isPortrait && isMobileSize)
+    }
+
+    checkOrientation()
+    window.addEventListener('resize', checkOrientation)
+    return () => window.removeEventListener('resize', checkOrientation)
+  }, [])
+
+  // Initialize Responsive Font/Sidebar
   useEffect(() => {
     if (window.innerWidth < 640) {
       setIsSidebarOpen(false)
@@ -104,7 +107,7 @@ export default function Home() {
     }
   }, [])
 
-  // Close settings dropdown on click outside
+  // Close Settings Dropdown
   useEffect(() => {
     if (!isSettingsOpen) return
     const handleClick = () => setIsSettingsOpen(false)
@@ -112,7 +115,7 @@ export default function Home() {
     return () => window.removeEventListener('click', handleClick)
   }, [isSettingsOpen])
 
-  // Listen for Ctrl+K
+  // Listen for Ctrl+K (Command Palette)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -124,10 +127,62 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Save changes via Ctrl+S
+  const triggerSave = async () => {
+    if (!isAdmin || !activeFile) return
+    setIsSaving(true)
+    const time = new Date().toTimeString().split(' ')[0]
+    setLogs(prev => [...prev, { timestamp: time, message: `Saving changes to ${activeFile.path}...`, type: 'info' }])
+    
+    try {
+      const res = await fetch(`/api/files/${activeFile.path}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content: contentMap[activeFile.path] })
+      })
+      const json = await res.json()
+      if (json.success) {
+        setOriginalContentMap(prev => ({ ...prev, [activeFile.path]: contentMap[activeFile.path] }))
+        setLogs(prev => [...prev, { timestamp: time, message: `Saved ${activeFile.path} successfully.`, type: 'success' }])
+      } else {
+        setLogs(prev => [...prev, { timestamp: time, message: `Error saving file: ${json.error}`, type: 'error' }])
+      }
+    } catch (err) {
+      setLogs(prev => [...prev, { timestamp: time, message: `Network error saving file ${activeFile.path}`, type: 'error' }])
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Ctrl+S key listener hook
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        triggerSave()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeFile, contentMap, token, isAdmin])
+
+  const findNode = (nodes: FileNode[], id: string): FileNode | null => {
+    for (const n of nodes) {
+      if (n.id === id) return n
+      if (n.children) {
+        const res = findNode(n.children, id)
+        if (res) return res
+      }
+    }
+    return null
+  }
+
   const handleFileSelect = (node: FileNode) => {
     setActiveFile(node)
     
-    // Add to tabs if not already present
     setTabs(prev => {
       const exists = prev.some(t => t.id === node.id)
       const updated = prev.map(t => ({ ...t, isActive: t.id === node.id }))
@@ -137,7 +192,6 @@ export default function Home() {
       return updated
     })
 
-    // Log the file open action
     const time = new Date().toTimeString().split(' ')[0]
     setLogs(prev => [...prev, { timestamp: time, message: `Opened file ${node.path}`, type: 'info' }])
   }
@@ -149,23 +203,11 @@ export default function Home() {
       
       const newTabs = prev.filter(t => t.id !== tabId)
       
-      // If closing active tab, activate another
       if (prev[index].isActive && newTabs.length > 0) {
         const nextActiveIdx = Math.max(0, index - 1)
         newTabs[nextActiveIdx].isActive = true
         
-        // Find corresponding file node to set active
-        const findNode = (nodes: FileNode[], id: string): FileNode | null => {
-          for (const n of nodes) {
-            if (n.id === id) return n
-            if (n.children) {
-              const res = findNode(n.children, id)
-              if (res) return res
-            }
-          }
-          return null
-        }
-        const activeNode = findNode(initialFiles, newTabs[nextActiveIdx].id)
+        const activeNode = findNode(files, newTabs[nextActiveIdx].id)
         setActiveFile(activeNode)
       } else if (newTabs.length === 0) {
         setActiveFile(null)
@@ -176,30 +218,154 @@ export default function Home() {
   }
 
   const handleTabSelect = (tabId: string) => {
-    const findNode = (nodes: FileNode[], id: string): FileNode | null => {
-      for (const n of nodes) {
-        if (n.id === id) return n
-        if (n.children) {
-          const res = findNode(n.children, id)
-          if (res) return res
-        }
-      }
-      return null
-    }
-    const node = findNode(initialFiles, tabId)
+    const node = findNode(files, tabId)
     if (node) {
       setActiveFile(node)
       setTabs(prev => prev.map(t => ({ ...t, isActive: t.id === tabId })))
     }
   }
 
+  // Admin Authentication Actions
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginError('')
+    const time = new Date().toTimeString().split(' ')[0]
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword })
+      })
+      const json = await res.json()
+      if (json.success) {
+        setIsAdmin(true)
+        setToken(json.token)
+        sessionStorage.setItem('isAdmin', 'true')
+        sessionStorage.setItem('admin_token', json.token)
+        
+        setLogs(prev => [...prev, { timestamp: time, message: '[auth] Admin session initialized successfully.', type: 'success' }])
+        setIsLoginModalOpen(false)
+        setAdminPassword('')
+      } else {
+        setLoginError(json.error || 'Authentication failed')
+        setLogs(prev => [...prev, { timestamp: time, message: `[auth] Failed admin authentication attempt: ${json.error}`, type: 'error' }])
+      }
+    } catch (err) {
+      setLoginError('Network connection error')
+      setLogs(prev => [...prev, { timestamp: time, message: '[auth] Network error during authentication.', type: 'error' }])
+    }
+  }
+
+  const handleLogout = () => {
+    const time = new Date().toTimeString().split(' ')[0]
+    setIsAdmin(false)
+    setToken(null)
+    sessionStorage.removeItem('isAdmin')
+    sessionStorage.removeItem('admin_token')
+    
+    // Clear cookies client-side
+    document.cookie = "admin_token=; path=/; max-age=0;"
+
+    setLogs(prev => [...prev, { timestamp: time, message: '[auth] Admin session terminated.', type: 'info' }])
+    setIsSettingsOpen(false)
+  }
+
+  // Add Project CRUD Action
+  const handleCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setNewProjectError('')
+    if (!newProjectFileName.trim()) return
+
+    let cleanName = newProjectFileName.trim()
+    if (!cleanName.endsWith('.json')) {
+      cleanName += '.json'
+    }
+
+    const baseName = cleanName.replace('.json', '')
+    if (!/^[a-zA-Z0-9_-]+$/.test(baseName)) {
+      setNewProjectError('Invalid characters. Use alphanumeric, dash or underscore only.')
+      return
+    }
+
+    const defaultProj = {
+      name: baseName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Platform',
+      description: "A newly created full stack system project.",
+      techStack: ["React.js", "Node.js", "Express.js", "MongoDB"],
+      architecture: "React Frontend Client → API Gateway → Backend Engine → Database Cluster",
+      endpoints: [
+        {
+          name: "Fetch Health State",
+          method: "GET",
+          path: "/api/health",
+          description: "Check status of the project server modules.",
+          mockResponse: { status: "nominal", code: 200 },
+          mockLatency: 120
+        }
+      ],
+      highlights: ["Initialized new workspace configuration node"],
+      backendFeatures: ["Nominal state controller"],
+      frontendFeatures: ["Vite dynamic route view template"]
+    }
+
+    try {
+      const res = await fetch('/api/files', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fileName: cleanName,
+          projectData: defaultProj
+        })
+      })
+      const json = await res.json()
+      if (json.success) {
+        setFiles(json.data.files)
+        setContentMap(json.data.contents)
+        setOriginalContentMap(json.data.contents)
+        
+        // Auto-select the newly added project file node
+        const projectsFolder = json.data.files.find((f: any) => f.id === 'projects')
+        if (projectsFolder && projectsFolder.children) {
+          const newNode = projectsFolder.children.find((c: any) => c.name === cleanName)
+          if (newNode) {
+            handleFileSelect(newNode)
+          }
+        }
+
+        const time = new Date().toTimeString().split(' ')[0]
+        setLogs(prev => [...prev, { timestamp: time, message: `Created project projects/${cleanName} successfully.`, type: 'success' }])
+        
+        setIsAddProjectModalOpen(false)
+        setNewProjectFileName('')
+      } else {
+        setNewProjectError(json.error || 'Failed to create project')
+      }
+    } catch (err) {
+      setNewProjectError('Network error during project creation')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-background text-foreground justify-center items-center font-mono">
+        <div className="space-y-4 text-center">
+          <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="text-xs text-muted">Loading workspace assets...</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-4 py-1.5 bg-sidebar border-b border-border text-xs font-mono">
+      <header className="flex items-center justify-between px-4 py-1.5 bg-sidebar border-b border-border text-xs font-mono select-none">
         <div className="flex items-center gap-3">
           <span className="font-semibold text-accent">Nadirsha-workspace</span>
-          <span className="text-muted border-l border-border pl-3">
+          <span className="text-muted border-l border-border pl-3 hidden sm:inline">
             ~/ {activeFile ? activeFile.path : ''}
           </span>
         </div>
@@ -221,7 +387,7 @@ export default function Home() {
       {/* Main Workspace Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Activity Bar (Far Left Strip) */}
-        <aside className="w-12 bg-sidebar border-r border-border flex flex-col justify-between items-center py-4">
+        <aside className="w-12 bg-sidebar border-r border-border flex flex-col justify-between items-center py-4 select-none">
           <div className="flex flex-col gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -292,6 +458,30 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="border-t border-border/50 my-1" />
+                
+                {/* Admin Mode Toggle */}
+                {isAdmin ? (
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-xs font-mono rounded hover:bg-code-bg transition-colors text-amber-500 hover:text-amber-400 cursor-pointer flex items-center justify-between"
+                  >
+                    <span>Admin Logout</span>
+                    <Shield className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      setIsLoginModalOpen(true)
+                      setIsSettingsOpen(false)
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-mono rounded hover:bg-code-bg transition-colors text-accent hover:text-accent/90 cursor-pointer flex items-center justify-between"
+                  >
+                    <span>Admin Login</span>
+                    <Shield className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <div className="border-t border-border/50 my-1" />
                 <button 
                   onClick={() => {
                     setLogs([])
@@ -318,25 +508,24 @@ export default function Home() {
 
         {/* Sidebar file tree */}
         <aside className={cn(
-          "w-64 bg-sidebar border-r border-border flex flex-col transition-all duration-200",
-          // Mobile responsive overlay positioning
+          "w-64 bg-sidebar border-r border-border flex flex-col transition-all duration-200 select-none",
           "max-sm:fixed max-sm:left-12 max-sm:top-[31px] max-sm:bottom-[108px] max-sm:z-40 max-sm:shadow-2xl",
-          // Open/Close transition classes
           isSidebarOpen 
             ? "max-sm:translate-x-0 sm:w-64" 
             : "max-sm:-translate-x-full sm:w-0 sm:overflow-hidden sm:border-r-0"
         )}>
           <div className="flex-1 overflow-y-auto flex flex-col">
             <FileTree 
-              nodes={initialFiles}
+              nodes={files}
               activeFile={activeFile ? activeFile.path : null}
               onFileSelect={(node) => {
                 handleFileSelect(node)
-                // Close sidebar overlay automatically when selecting a file on mobile
                 if (window.innerWidth < 640) {
                   setIsSidebarOpen(false)
                 }
               }}
+              isAdmin={isAdmin}
+              onAddProject={() => setIsAddProjectModalOpen(true)}
             />
           </div>
         </aside>
@@ -349,9 +538,23 @@ export default function Home() {
             onTabSelect={handleTabSelect}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
-            <WorkspaceViewer activeFile={activeFile} fontSize={fontSize} />
+            <WorkspaceViewer 
+              activeFile={activeFile} 
+              fontSize={fontSize}
+              isAdmin={isAdmin}
+              token={token}
+              contentMap={contentMap}
+              onContentChange={(path, newContent) => {
+                setContentMap(prev => ({ ...prev, [path]: newContent }))
+              }}
+              isDirty={activeFile ? contentMap[activeFile.path] !== originalContentMap[activeFile.path] : false}
+              isSaving={isSaving}
+              onSave={triggerSave}
+              logs={logs}
+              setLogs={setLogs}
+            />
           </div>
-          <StatusBar logs={logs} />
+          <StatusBar logs={logs} isAdmin={isAdmin} />
         </main>
       </div>
 
@@ -359,12 +562,139 @@ export default function Home() {
         key={isCommandPaletteOpen ? 'open' : 'closed'}
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        files={initialFiles}
+        files={files}
         onSelectFile={handleFileSelect}
       />
 
+      {/* Secret Password Gate Modal */}
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm select-none">
+          <div className="bg-sidebar border border-border w-full max-w-sm rounded-lg shadow-2xl p-5 relative animate-in fade-in zoom-in-95 duration-150">
+            <button 
+              onClick={() => {
+                setIsLoginModalOpen(false)
+                setAdminPassword('')
+                setLoginError('')
+              }}
+              className="absolute top-3 right-3 text-muted hover:text-foreground cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4 text-accent border-b border-border pb-2">
+              <Shield className="w-5 h-5" />
+              <h3 className="font-mono text-sm font-semibold">Admin Authentication Gate</h3>
+            </div>
+            
+            <form onSubmit={handleLogin} className="space-y-4 font-mono text-xs">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted uppercase">Access Password</label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  autoFocus
+                  className="w-full bg-code-bg border border-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent text-sm"
+                />
+              </div>
+
+              {loginError && (
+                <div className="text-red-500 flex items-center gap-1.5 pt-1 text-[11px]">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoginModalOpen(false)
+                    setAdminPassword('')
+                    setLoginError('')
+                  }}
+                  className="px-3 py-1.5 border border-border hover:bg-code-bg text-muted hover:text-foreground rounded transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded transition-colors font-semibold cursor-pointer"
+                >
+                  Access Mode
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Project Modal */}
+      {isAddProjectModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm select-none">
+          <div className="bg-sidebar border border-border w-full max-w-sm rounded-lg shadow-2xl p-5 relative animate-in fade-in zoom-in-95 duration-150">
+            <button 
+              onClick={() => {
+                setIsAddProjectModalOpen(false)
+                setNewProjectFileName('')
+                setNewProjectError('')
+              }}
+              className="absolute top-3 right-3 text-muted hover:text-foreground cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4 text-accent border-b border-border pb-2">
+              <Shield className="w-5 h-5" />
+              <h3 className="font-mono text-sm font-semibold">Add New Project Configuration</h3>
+            </div>
+            
+            <form onSubmit={handleCreateProject} className="space-y-4 font-mono text-xs">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-muted uppercase">JSON File Name</label>
+                <input
+                  type="text"
+                  value={newProjectFileName}
+                  onChange={(e) => setNewProjectFileName(e.target.value)}
+                  placeholder="e.g. spendshield_v2.1.json"
+                  autoFocus
+                  className="w-full bg-code-bg border border-border rounded px-3 py-2 text-foreground focus:outline-none focus:border-accent text-sm"
+                />
+              </div>
+
+              {newProjectError && (
+                <div className="text-red-500 flex items-center gap-1.5 pt-1 text-[11px]">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>{newProjectError}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddProjectModalOpen(false)
+                    setNewProjectFileName('')
+                    setNewProjectError('')
+                  }}
+                  className="px-3 py-1.5 border border-border hover:bg-code-bg text-muted hover:text-foreground rounded transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded transition-colors font-semibold cursor-pointer"
+                >
+                  Create File
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Landscape Orientation Prompt */}
       {showRotatePrompt && !dismissedPrompt && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-background/95 backdrop-blur-md text-center">
+        <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center p-6 bg-background/95 backdrop-blur-md text-center">
           <div className="max-w-xs space-y-6">
             <div className="relative inline-block p-6 bg-sidebar border border-border rounded-full shadow-inner">
               <Smartphone className="w-16 h-16 text-accent animate-phone-rotate" />

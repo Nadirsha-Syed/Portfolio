@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen, FileText, Code, Mail, User } from 'lucide-react'
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, FileText, Code, Mail, User, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileNode } from '@/types'
 
@@ -9,9 +9,11 @@ interface FileTreeProps {
   nodes: FileNode[]
   activeFile: string | null
   onFileSelect: (node: FileNode) => void
+  isAdmin?: boolean
+  onAddProject?: () => void
 }
 
-export function FileTree({ nodes, activeFile, onFileSelect }: FileTreeProps) {
+export function FileTree({ nodes, activeFile, onFileSelect, isAdmin, onAddProject }: FileTreeProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 text-xs font-mono font-semibold text-muted uppercase tracking-wider border-b border-border">
@@ -25,6 +27,8 @@ export function FileTree({ nodes, activeFile, onFileSelect }: FileTreeProps) {
             activeFile={activeFile}
             onFileSelect={onFileSelect}
             level={0}
+            isAdmin={isAdmin}
+            onAddProject={onAddProject}
           />
         ))}
       </div>
@@ -37,9 +41,11 @@ interface FileTreeNodeProps {
   activeFile: string | null
   onFileSelect: (node: FileNode) => void
   level: number
+  isAdmin?: boolean
+  onAddProject?: () => void
 }
 
-function FileTreeNode({ node, activeFile, onFileSelect, level }: FileTreeNodeProps) {
+function FileTreeNode({ node, activeFile, onFileSelect, level, isAdmin, onAddProject }: FileTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(node.type === 'directory')
   const isActive = activeFile === node.path
 
@@ -79,16 +85,30 @@ function FileTreeNode({ node, activeFile, onFileSelect, level }: FileTreeNodePro
     <div>
       <div
         className={cn(
-          "flex items-center gap-2 px-3 py-1 cursor-pointer hover:bg-sidebar-border/50 transition-colors",
+          "flex items-center justify-between group px-3 py-1 cursor-pointer hover:bg-sidebar-border/50 transition-colors",
           isActive && "bg-accent/10 text-accent",
           "font-mono text-sm"
         )}
         style={{ paddingLeft: `${level * 12 + 12}px` }}
         onClick={handleClick}
       >
-        {getChevron()}
-        {getIcon()}
-        <span className="truncate">{node.name}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {getChevron()}
+          {getIcon()}
+          <span className="truncate">{node.name}</span>
+        </div>
+        {node.id === 'projects' && isAdmin && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onAddProject?.()
+            }}
+            className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-code-bg rounded text-muted hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
+            title="Add New Project"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
       {isExpanded && node.children && (
         <div>
@@ -99,6 +119,8 @@ function FileTreeNode({ node, activeFile, onFileSelect, level }: FileTreeNodePro
               activeFile={activeFile}
               onFileSelect={onFileSelect}
               level={level + 1}
+              isAdmin={isAdmin}
+              onAddProject={onAddProject}
             />
           ))}
         </div>

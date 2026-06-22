@@ -1,16 +1,17 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
-import { GitBranch, Activity, Moon, Sun, ChevronDown, ChevronUp } from 'lucide-react'
+import { GitBranch, Activity, Moon, Sun, ChevronDown, ChevronUp, Shield } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { LogEntry } from '@/types'
 
 interface StatusBarProps {
   logs: LogEntry[]
+  isAdmin?: boolean
 }
 
-export function StatusBar({ logs }: StatusBarProps) {
+export function StatusBar({ logs, isAdmin }: StatusBarProps) {
   const { theme, setTheme } = useTheme()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = useState(true)
@@ -37,13 +38,23 @@ export function StatusBar({ logs }: StatusBarProps) {
             <GitBranch className="w-3.5 h-3.5" />
             <span>main</span>
           </div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 text-green-500 hover:text-green-400 cursor-pointer font-semibold"
-          >
-            <Activity className="w-3.5 h-3.5 animate-pulse" />
-            <span>Status: Nominal</span>
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1.5 text-amber-500 hover:text-amber-400 cursor-pointer font-semibold"
+            >
+              <Shield className="w-3.5 h-3.5 animate-pulse" />
+              <span>Mode: Read/Write (Admin)</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1.5 text-green-500 hover:text-green-400 cursor-pointer font-semibold"
+            >
+              <Activity className="w-3.5 h-3.5 animate-pulse" />
+              <span>Status: Nominal</span>
+            </button>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
