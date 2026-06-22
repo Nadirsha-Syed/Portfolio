@@ -663,6 +663,15 @@ export function WorkspaceViewer({
                         Developed a personal accountability scoring engine with Cloud Firestore realtime sync, lowering goal tracking friction.
                       </p>
                     </div>
+                    <div>
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="font-bold">CrudDash – RESTful CRUD Application</span>
+                        <span className="text-xs font-mono text-muted">Node.js & Express</span>
+                      </div>
+                      <p className="text-xs text-muted mt-1">
+                        Built a RESTful blog CRUD platform using EJS server-side rendering, UUID, and Method Override. Deployed on Render.
+                      </p>
+                    </div>
                   </div>
                 </div>
 

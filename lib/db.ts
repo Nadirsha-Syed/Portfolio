@@ -43,6 +43,13 @@ const defaultFiles: FileNode[] = [
         type: 'file',
         path: 'projects/integrity_execution.json',
         extension: 'json'
+      },
+      {
+        id: 'crud_dash',
+        name: 'crud_dash.json',
+        type: 'file',
+        path: 'projects/crud_dash.json',
+        extension: 'json'
       }
     ]
   },
@@ -230,6 +237,114 @@ Regional-language AI assistant for farmers.`,
   ]
 }`,
 
+  'projects/crud_dash.json': `{
+  "name": "CrudDash – RESTful CRUD Application",
+  "description": "Built a CRUD application to understand RESTful architecture and server-side rendering. Implemented complete CRUD functionality, RESTful routing, middleware handling, and deployment on Render. Solved real-world deployment issues including route handling, method overriding, and production path configuration.",
+  "techStack": ["Node.js", "Express.js", "EJS", "Vanilla CSS", "UUID", "Method Override"],
+  "liveUrl": "https://crud-dash.onrender.com/posts",
+  "architecture": "User Browser → EJS Views (Frontend) → Express.js Server → CRUD Controllers → In-Memory Data Store (UUID-Based Posts)",
+  "endpoints": [
+    {
+      "name": "Fetch All Posts",
+      "method": "GET",
+      "path": "/posts",
+      "description": "Retrieve all posts from the in-memory data store.",
+      "mockResponse": [
+        {
+          "id": "123",
+          "username": "John",
+          "content": "Hello World"
+        }
+      ],
+      "mockLatency": 100
+    },
+    {
+      "name": "Fetch Single Post",
+      "method": "GET",
+      "path": "/posts/123",
+      "description": "Retrieve a single post by its ID.",
+      "mockResponse": {
+        "id": "123",
+        "username": "John",
+        "content": "Hello World"
+      },
+      "mockLatency": 120
+    },
+    {
+      "name": "Create New Post",
+      "method": "POST",
+      "path": "/posts",
+      "description": "Create a new post and store it in the database.",
+      "mockResponse": {
+        "message": "Post created successfully"
+      },
+      "mockLatency": 150
+    },
+    {
+      "name": "Update Existing Post",
+      "method": "PUT",
+      "path": "/posts/123",
+      "description": "Update post username or content.",
+      "mockResponse": {
+        "message": "Post updated successfully"
+      },
+      "mockLatency": 180
+    },
+    {
+      "name": "Delete Post",
+      "method": "DELETE",
+      "path": "/posts/123",
+      "description": "Remove a post from the database by ID.",
+      "mockResponse": {
+        "message": "Post deleted successfully"
+      },
+      "mockLatency": 200
+    }
+  ],
+  "highlights": [
+    "Built a complete RESTful CRUD application from scratch using Node.js and Express.js.",
+    "Implemented all 7 standard REST routes following industry conventions.",
+    "Successfully deployed the application on Render and resolved production issues.",
+    "Gained practical experience with server-side rendering using EJS."
+  ],
+  "backendFeatures": [
+    "Implemented Create, Read, Update, and Delete operations for post management.",
+    "Designed RESTful routing architecture using Express.js.",
+    "Used Method Override to support PATCH and DELETE requests through HTML forms.",
+    "Generated unique post identifiers using UUID and managed request handling through middleware."
+  ],
+  "frontendFeatures": [
+    "Built dynamic server-rendered pages using EJS templates.",
+    "Developed intuitive forms for creating and editing posts.",
+    "Designed a clean and responsive user interface using Vanilla CSS.",
+    "Implemented dynamic content rendering based on route parameters and user actions."
+  ],
+  "upcomingFeatures": [
+    "Integrate MongoDB for persistent data storage.",
+    "Add user authentication and authorization features.",
+    "Implement search, filtering, and pagination capabilities.",
+    "Develop REST APIs for future frontend framework integration."
+  ],
+  "responsibilities": [
+    "Designed the overall application structure and routing workflow.",
+    "Developed backend functionality using Node.js and Express.js.",
+    "Created EJS views and connected them with server-side data rendering.",
+    "Managed deployment, debugging, and production issue resolution."
+  ],
+  "results": [
+    "Strengthened understanding of RESTful architecture and HTTP methods.",
+    "Gained hands-on experience with Express middleware and route handling.",
+    "Learned deployment workflows and production debugging techniques.",
+    "Built a fully functional CRUD application ready for real-world enhancements."
+  ],
+  "teamwork": [
+    "Independently planned, developed, and deployed the entire application.",
+    "Researched documentation and community resources to solve technical challenges.",
+    "Practiced problem-solving through deployment and routing issue resolution.",
+    "Managed project development lifecycle from implementation to production deployment."
+  ]
+}`,
+
   'education_&_leadership.tsx': `interface LeadershipNode {
   role: string;
   organization: string;
@@ -321,6 +436,27 @@ export function readDb(): DatabaseSchema {
       sanitizedContents[cleanKey] = v
     }
     data.contents = sanitizedContents
+
+    // Self-healing merge of new projects
+    const projectsFolder = data.files.find(f => f.id === 'projects')
+    if (projectsFolder && projectsFolder.children) {
+      const hasCrudDash = projectsFolder.children.some(c => c.id === 'crud_dash')
+      if (!hasCrudDash) {
+        projectsFolder.children.push({
+          id: 'crud_dash',
+          name: 'crud_dash.json',
+          type: 'file',
+          path: 'projects/crud_dash.json',
+          extension: 'json'
+        })
+        changed = true
+      }
+    }
+    
+    if (!('projects/crud_dash.json' in data.contents)) {
+      data.contents['projects/crud_dash.json'] = defaultContents['projects/crud_dash.json']
+      changed = true
+    }
 
     if (changed) {
       fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8')
