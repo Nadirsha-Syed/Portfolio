@@ -288,7 +288,45 @@ export function readDb(): DatabaseSchema {
       return data
     }
     const raw = fs.readFileSync(DB_PATH, 'utf-8')
-    return JSON.parse(raw) as DatabaseSchema
+    const data = JSON.parse(raw) as DatabaseSchema
+    
+    let changed = false
+
+    const sanitizePath = (p: string): string => {
+      return p.split('/').map(part => part.replace(/\s+/g, '')).join('/')
+    }
+
+    const sanitizeNode = (node: FileNode) => {
+      const oldPath = node.path
+      const newPath = sanitizePath(node.path)
+      if (oldPath !== newPath) {
+        node.path = newPath
+        node.name = node.name.replace(/\s+/g, '')
+        node.id = node.id.replace(/\s+/g, '')
+        changed = true
+      }
+      if (node.children) {
+        node.children.forEach(sanitizeNode)
+      }
+    }
+
+    data.files.forEach(sanitizeNode)
+
+    const sanitizedContents: Record<string, string> = {}
+    for (const [k, v] of Object.entries(data.contents)) {
+      const cleanKey = sanitizePath(k)
+      if (cleanKey !== k) {
+        changed = true
+      }
+      sanitizedContents[cleanKey] = v
+    }
+    data.contents = sanitizedContents
+
+    if (changed) {
+      fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8')
+    }
+
+    return data
   } catch (error) {
     console.error('Failed to read database file', error)
     return {
