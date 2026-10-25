@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
-import fs from 'fs'
-import path from 'path'
+import { saveResumeData, getResumeData } from '@/lib/resume-storage'
 
 async function isAuthenticated(request: Request): Promise<boolean> {
   const authHeader = request.headers.get('Authorization')
@@ -29,44 +28,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'No file uploaded' }, { status: 400 })
     }
 
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json({ success: false, error: 'Only PDF files are allowed' }, { status: 400 })
     }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    const publicDir = path.join(process.cwd(), 'public')
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir, { recursive: true })
-    }
-
-    const filePath = path.join(publicDir, 'resume.pdf')
-    await fs.promises.writeFile(filePath, buffer)
+    const metadata = await saveResumeData(file)
 
     return NextResponse.json({ 
       success: true, 
       message: 'Resume uploaded successfully',
-      size: buffer.length,
-      updatedAt: new Date().toISOString()
+      size: metadata.size,
+      updatedAt: metadata.updatedAt,
+      url: metadata.url,
+      source: metadata.source
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading resume:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ 
+      success: false, 
+      error: error?.message || 'Internal server error' 
+    }, { status: 500 })
   }
 }
 
 export async function GET() {
   try {
-    const filePath = path.join(process.cwd(), 'public', 'resume.pdf')
-    if (!fs.existsSync(filePath)) {
+    const data = await getResumeData()
+    if (!data) {
       return NextResponse.json({ exists: false })
     }
-    const stats = await fs.promises.stat(filePath)
     return NextResponse.json({
       exists: true,
-      size: stats.size,
-      updatedAt: stats.mtime.toISOString()
+      size: data.metadata.size,
+      updatedAt: data.metadata.updatedAt,
+      url: data.metadata.url,
+      source: data.metadata.source
     })
   } catch (error) {
     return NextResponse.json({ exists: false, error: 'Unable to read file info' })
