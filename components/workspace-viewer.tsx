@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { FileNode, LogEntry } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import { ProjectRenderer } from './project-renderer'
+import { saveLocalPdf, getLocalPdf } from '@/lib/client-pdf-cache'
 
 interface EnvVarRowProps {
   envKey: string
@@ -161,16 +162,36 @@ export function WorkspaceViewer({
   const [pdfTimestamp, setPdfTimestamp] = useState<number>(Date.now())
   const [pdfInfo, setPdfInfo] = useState<{ size?: number; updatedAt?: string; name?: string } | null>(null)
   const [pdfViewMode, setPdfViewMode] = useState<'preview' | 'html'>('preview')
+  const [localPdfBlobUrl, setLocalPdfBlobUrl] = useState<string | null>(null)
+  const [pdfSource, setPdfSource] = useState<'vercel-blob' | 'filesystem' | 'tmp' | 'memory' | 'client-cache' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Fetch current PDF info whenever activeFile is pdf or timestamp changes
+  // Fetch current PDF info and restore cached document if present
   useEffect(() => {
     if (activeFile?.extension === 'pdf') {
+      // 1. Check local IndexedDB cache first so refresh never loses the uploaded document
+      getLocalPdf().then(cached => {
+        if (cached) {
+          setLocalPdfBlobUrl(cached.blobUrl)
+          setPdfInfo(cached.metadata)
+          setPdfSource('client-cache')
+        }
+      }).catch(() => {})
+
+      // 2. Fetch server metadata
       fetch('/api/download-resume?info=1')
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            setPdfInfo({ size: data.size, updatedAt: data.updatedAt, name: data.filename })
+            setPdfSource(prev => data.source === 'vercel-blob' ? 'vercel-blob' : (prev || data.source))
+            if (data.source === 'vercel-blob') {
+              setPdfInfo({ size: data.size, updatedAt: data.updatedAt, name: data.filename })
+              if (data.url) {
+                setLocalPdfBlobUrl(data.url)
+              }
+            } else {
+              setPdfInfo(prev => prev || { size: data.size, updatedAt: data.updatedAt, name: data.filename })
+            }
           }
         })
         .catch(() => {})
@@ -285,6 +306,21 @@ export function WorkspaceViewer({
     const time = new Date().toTimeString().split(' ')[0]
     setLogs(prev => [...prev, { timestamp: time, message: `[admin] Uploading ${file.name} (${Math.round(file.size / 1024)} KB)...`, type: 'info' }])
 
+    // Cache in client-side IndexedDB so refresh never loses the document
+    try {
+      await saveLocalPdf(file, {
+        name: file.name,
+        size: file.size,
+        updatedAt: new Date().toISOString()
+      })
+      const blobUrl = URL.createObjectURL(file)
+      setLocalPdfBlobUrl(blobUrl)
+      setPdfInfo({ size: file.size, updatedAt: new Date().toISOString(), name: file.name })
+      setPdfSource('client-cache')
+    } catch (cacheErr) {
+      console.warn('Could not cache PDF in browser:', cacheErr)
+    }
+
     const formData = new FormData()
     formData.append('file', file)
 
@@ -302,6 +338,10 @@ export function WorkspaceViewer({
       if (json.success) {
         const newTime = Date.now()
         setPdfTimestamp(newTime)
+        if (json.url) {
+          setLocalPdfBlobUrl(json.url)
+        }
+        setPdfSource(json.source || 'client-cache')
         setPdfInfo({ size: json.size || file.size, updatedAt: json.updatedAt || new Date().toISOString(), name: file.name })
         setUploadStatus('success')
         setLogs(prev => [...prev, { timestamp: time, message: `[admin] resume.pdf uploaded successfully (${Math.round(file.size / 1024)} KB). Public download target updated.`, type: 'success' }])
@@ -575,8 +615,8 @@ export function WorkspaceViewer({
             <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
               {/* Direct Download Button (Accessible to Everyone) */}
               <a
-                href="/api/download-resume"
-                download="Syed_Nadirsha_Resume.pdf"
+                href={localPdfBlobUrl || "/api/download-resume"}
+                download={pdfInfo?.name || "Syed_Nadirsha_Resume.pdf"}
                 className="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-semibold rounded-lg bg-accent text-accent-foreground hover:bg-accent/90 transition-all shadow-sm hover:shadow-accent/20 cursor-pointer"
                 title="Download the latest uploaded PDF"
               >
@@ -586,7 +626,7 @@ export function WorkspaceViewer({
 
               {/* Open in New Window */}
               <a
-                href={`/api/download-resume?inline=1&t=${pdfTimestamp}`}
+                href={localPdfBlobUrl || `/api/download-resume?inline=1&t=${pdfTimestamp}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-medium rounded-lg border border-border bg-sidebar/50 hover:bg-sidebar transition-colors cursor-pointer text-muted hover:text-foreground"
@@ -640,6 +680,29 @@ export function WorkspaceViewer({
                   Overwrites <code className="text-foreground font-semibold">public/resume.pdf</code> for all visitors
                 </span>
               </div>
+
+              {/* Storage Status Banner */}
+              {pdfSource === 'vercel-blob' ? (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs flex items-center gap-2 text-emerald-500 font-mono">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>Cloud Storage Connected (Vercel Blob): Uploads permanently persist across all devices &amp; refreshes.</span>
+                </div>
+              ) : (
+                <div className="p-3 bg-sidebar/50 border border-border rounded-lg text-xs space-y-1.5 font-sans">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-mono font-semibold text-foreground flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Browser Cache Active
+                    </span>
+                    <span className="text-[11px] font-mono text-muted">
+                      Your uploaded PDF is preserved in this browser across refreshes.
+                    </span>
+                  </div>
+                  <p className="text-muted text-[11px] leading-relaxed">
+                    To make your uploaded PDF permanently accessible to <strong>all other visitors worldwide on Vercel</strong>, enable Vercel Blob in your Vercel Dashboard (Storage → Blob → Connect Store) or replace <code className="text-foreground">public/resume.pdf</code> directly in this project.
+                  </p>
+                </div>
+              )}
 
               <div
                 onDragOver={(e) => {
@@ -745,8 +808,8 @@ export function WorkspaceViewer({
 
               <div className="rounded-xl border border-border overflow-hidden bg-sidebar/10 shadow-sm relative min-h-[600px]">
                 <iframe
-                  key={pdfTimestamp}
-                  src={`/api/download-resume?inline=1&t=${pdfTimestamp}`}
+                  key={`${pdfTimestamp}-${localPdfBlobUrl || 'server'}`}
+                  src={localPdfBlobUrl || `/api/download-resume?inline=1&t=${pdfTimestamp}`}
                   className="w-full h-[720px] bg-background border-none"
                   title="Syed Nadirsha Resume PDF Viewer"
                 />
@@ -754,12 +817,12 @@ export function WorkspaceViewer({
 
               <div className="text-center pt-2">
                 <a
-                  href="/api/download-resume"
-                  download="Syed_Nadirsha_Resume.pdf"
+                  href={localPdfBlobUrl || "/api/download-resume"}
+                  download={pdfInfo?.name || "Syed_Nadirsha_Resume.pdf"}
                   className="text-xs font-mono text-accent hover:underline inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Need an offline copy? Click here to download Syed_Nadirsha_Resume.pdf directly.</span>
+                  <span>Need an offline copy? Click here to download {pdfInfo?.name || "Syed_Nadirsha_Resume.pdf"} directly.</span>
                 </a>
               </div>
             </div>
@@ -877,8 +940,8 @@ export function WorkspaceViewer({
         </div>
         {activeFile.extension === 'pdf' ? (
           <a
-            href="/api/download-resume"
-            download="Syed_Nadirsha_Resume.pdf"
+            href={localPdfBlobUrl || "/api/download-resume"}
+            download={pdfInfo?.name || "Syed_Nadirsha_Resume.pdf"}
             className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-semibold rounded bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
