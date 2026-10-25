@@ -94,9 +94,9 @@ I enjoy building software for real-world ecosystems where technology, trust, and
 
 ## Building
 
-### RentalHub
+### [Rental Hub](https://rental-platform-blue.vercel.app/)
 
-A full-stack rental platform focused on booking workflows, role-based access, and conflict prevention.
+A full-stack rental platform focused on booking workflows, role-based access, and conflict prevention. 🔗 **Live Demo:** [rental-platform-blue.vercel.app](https://rental-platform-blue.vercel.app/)
 ## Interests
 
 * Backend Systems
@@ -128,9 +128,10 @@ Medicine availability finder with real-time pharmacy inventory.
 Regional-language AI assistant for farmers.`,
 
   'projects/vehicle_rental.json': `{
-  "name": "Vehicle Rental Aggregator Platform",
+  "name": "Vehicle Rental Aggregator Platform (Rental Hub)",
   "description": "A full-stack rental management platform that enables users to list, browse, and book rental vehicles efficiently.",
   "techStack": ["React.js", "Node.js", "Express.js", "MongoDB", "JWT Authentication"],
+  "liveUrl": "https://rental-platform-blue.vercel.app/",
   "architecture": "React Frontend (Glassmorphism) → JWT Auth Middleware → Express.js Engine (Conflict Prevention) → MongoDB Cluster",
   "endpoints": [
     {

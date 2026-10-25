@@ -866,9 +866,17 @@ export function WorkspaceViewer({
                   <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-accent border-b border-border/60 pb-1.5 mb-3">Projects</h3>
                   <div className="space-y-4">
                     <div>
-                      <div className="flex justify-between items-center gap-4">
-                        <span className="font-bold">Vehicle Rental Aggregator Platform</span>
-                        <span className="text-xs font-mono text-muted">Full-Stack</span>
+                      <div className="flex justify-between items-center gap-4 flex-wrap">
+                        <span className="font-bold">Rental Hub (Vehicle Rental Aggregator Platform)</span>
+                        <a 
+                          href="https://rental-platform-blue.vercel.app/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-mono text-emerald-500 hover:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Live Demo</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       </div>
                       <p className="text-xs text-muted mt-1">
                         A full-stack booking conflict prevention platform utilizing React, Node.js, and MongoDB. Structured around RBAC.
