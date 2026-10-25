@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { FileNode, LogEntry } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import { ProjectRenderer } from './project-renderer'
-import { saveLocalPdf, getLocalPdf } from '@/lib/client-pdf-cache'
+import { saveLocalPdf, getLocalPdf, clearLocalPdf } from '@/lib/client-pdf-cache'
 
 interface EnvVarRowProps {
   envKey: string
@@ -169,32 +169,30 @@ export function WorkspaceViewer({
   // Fetch current PDF info and restore cached document if present
   useEffect(() => {
     if (activeFile?.extension === 'pdf') {
-      // 1. Check local IndexedDB cache first so refresh never loses the uploaded document
-      getLocalPdf().then(cached => {
-        if (cached) {
-          setLocalPdfBlobUrl(cached.blobUrl)
-          setPdfInfo(cached.metadata)
-          setPdfSource('client-cache')
-        }
-      }).catch(() => {})
-
-      // 2. Fetch server metadata
+      // 1. Fetch server metadata first (prioritize newly deployed resume)
       fetch('/api/download-resume?info=1')
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            setPdfSource(prev => data.source === 'vercel-blob' ? 'vercel-blob' : (prev || data.source))
-            if (data.source === 'vercel-blob') {
-              setPdfInfo({ size: data.size, updatedAt: data.updatedAt, name: data.filename })
-              if (data.url) {
-                setLocalPdfBlobUrl(data.url)
-              }
+            setPdfSource(data.source)
+            setPdfInfo({ size: data.size, updatedAt: data.updatedAt, name: data.filename })
+            if (data.url) {
+              setLocalPdfBlobUrl(data.url)
             } else {
-              setPdfInfo(prev => prev || { size: data.size, updatedAt: data.updatedAt, name: data.filename })
+              setLocalPdfBlobUrl(null)
             }
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // If server fetch fails, fallback to local IndexedDB cache
+          getLocalPdf().then(cached => {
+            if (cached) {
+              setLocalPdfBlobUrl(cached.blobUrl)
+              setPdfInfo(cached.metadata)
+              setPdfSource('client-cache')
+            }
+          }).catch(() => {})
+        })
     }
   }, [activeFile, pdfTimestamp])
 
