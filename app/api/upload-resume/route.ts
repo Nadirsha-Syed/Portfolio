@@ -44,9 +44,31 @@ export async function POST(request: Request) {
     const filePath = path.join(publicDir, 'resume.pdf')
     await fs.promises.writeFile(filePath, buffer)
 
-    return NextResponse.json({ success: true, message: 'Resume uploaded successfully' })
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Resume uploaded successfully',
+      size: buffer.length,
+      updatedAt: new Date().toISOString()
+    })
   } catch (error) {
     console.error('Error uploading resume:', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function GET() {
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'resume.pdf')
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ exists: false })
+    }
+    const stats = await fs.promises.stat(filePath)
+    return NextResponse.json({
+      exists: true,
+      size: stats.size,
+      updatedAt: stats.mtime.toISOString()
+    })
+  } catch (error) {
+    return NextResponse.json({ exists: false, error: 'Unable to read file info' })
   }
 }

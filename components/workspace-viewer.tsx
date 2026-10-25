@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { FileText, Code, Mail, User, Phone, Copy, Check, ExternalLink, Save, Upload, Download, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { FileText, Code, Mail, User, Phone, Copy, Check, ExternalLink, Save, Upload, Download, AlertCircle, Eye, RefreshCw, FileUp, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { FileNode, LogEntry } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import { ProjectRenderer } from './project-renderer'
@@ -157,6 +158,24 @@ export function WorkspaceViewer({
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
   const [uploadError, setUploadError] = useState('')
+  const [pdfTimestamp, setPdfTimestamp] = useState<number>(Date.now())
+  const [pdfInfo, setPdfInfo] = useState<{ size?: number; updatedAt?: string; name?: string } | null>(null)
+  const [pdfViewMode, setPdfViewMode] = useState<'preview' | 'html'>('preview')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch current PDF info whenever activeFile is pdf or timestamp changes
+  useEffect(() => {
+    if (activeFile?.extension === 'pdf') {
+      fetch('/api/download-resume?info=1')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setPdfInfo({ size: data.size, updatedAt: data.updatedAt, name: data.filename })
+          }
+        })
+        .catch(() => {})
+    }
+  }, [activeFile, pdfTimestamp])
 
   // Adjust markdown view mode automatically for responsive screens
   useEffect(() => {
@@ -254,7 +273,7 @@ export function WorkspaceViewer({
 
   // File Upload Handlers (Resume.pdf)
   const handlePdfUpload = async (file: File) => {
-    if (file.type !== 'application/pdf') {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setUploadError('Only PDF documents are allowed.')
       setUploadStatus('error')
       return
@@ -264,33 +283,38 @@ export function WorkspaceViewer({
     setUploadError('')
     
     const time = new Date().toTimeString().split(' ')[0]
-    setLogs(prev => [...prev, { timestamp: time, message: `Uploading resume.pdf...`, type: 'info' }])
+    setLogs(prev => [...prev, { timestamp: time, message: `[admin] Uploading ${file.name} (${Math.round(file.size / 1024)} KB)...`, type: 'info' }])
 
     const formData = new FormData()
     formData.append('file', file)
 
     try {
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
       const res = await fetch('/api/upload-resume', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         body: formData
       })
       const json = await res.json()
       if (json.success) {
+        const newTime = Date.now()
+        setPdfTimestamp(newTime)
+        setPdfInfo({ size: json.size || file.size, updatedAt: json.updatedAt || new Date().toISOString(), name: file.name })
         setUploadStatus('success')
-        setLogs(prev => [...prev, { timestamp: time, message: `[uploader] resume.pdf uploaded successfully (overwritten).`, type: 'success' }])
+        setLogs(prev => [...prev, { timestamp: time, message: `[admin] resume.pdf uploaded successfully (${Math.round(file.size / 1024)} KB). Public download target updated.`, type: 'success' }])
         setTimeout(() => setUploadStatus('idle'), 4000)
       } else {
         setUploadError(json.error || 'Upload failed')
         setUploadStatus('error')
-        setLogs(prev => [...prev, { timestamp: time, message: `[uploader] resume upload failed: ${json.error}`, type: 'error' }])
+        setLogs(prev => [...prev, { timestamp: time, message: `[admin] resume upload failed: ${json.error}`, type: 'error' }])
       }
     } catch (err) {
       setUploadError('Network error uploading file')
       setUploadStatus('error')
-      setLogs(prev => [...prev, { timestamp: time, message: `[uploader] resume upload network error`, type: 'error' }])
+      setLogs(prev => [...prev, { timestamp: time, message: `[admin] resume upload network error`, type: 'error' }])
     }
   }
 
@@ -521,92 +545,227 @@ export function WorkspaceViewer({
 
     // 5. Stylized PDF Resume Viewer & Cloud Overwrite Zone
     if (activeFile.extension === 'pdf') {
+      const formattedSize = pdfInfo?.size 
+        ? `${(pdfInfo.size / 1024).toFixed(1)} KB`
+        : 'PDF Document'
+      const formattedDate = pdfInfo?.updatedAt 
+        ? new Date(pdfInfo.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+        : null
+
       return (
-        <div className="space-y-6 max-w-4xl">
-          <div className="border-b border-border pb-4 flex justify-between items-center gap-4 flex-wrap">
-            <div>
-              <h1 className="text-xl font-bold font-mono flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                Downloadable Resume File
-              </h1>
-              <p className="text-xs text-muted font-sans mt-1">
-                Access a print-friendly document version of Syed Nadirsha's CV.
+        <div className="space-y-6 max-w-4xl pb-10">
+          {/* Header Action Bar */}
+          <div className="border border-border/80 bg-sidebar/30 backdrop-blur rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                <h1 className="text-lg md:text-xl font-bold font-mono tracking-tight text-foreground">
+                  Syed Nadirsha — Resume (PDF)
+                </h1>
+                <span className="px-2 py-0.5 text-[10px] font-mono font-medium rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                  {formattedSize}
+                </span>
+              </div>
+              <p className="text-xs text-muted font-sans">
+                {formattedDate ? `Last updated: ${formattedDate} • ` : ''}
+                Print-ready CV available for direct download and inline inspection.
               </p>
             </div>
-            <a
-              href="/resume.pdf"
-              download="Syed_Nadirsha_Resume.pdf"
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono font-medium rounded border border-blue-500/30 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-all shadow-sm hover:shadow-blue-500/10 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download PDF</span>
-            </a>
+
+            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+              {/* Direct Download Button (Accessible to Everyone) */}
+              <a
+                href="/api/download-resume"
+                download="Syed_Nadirsha_Resume.pdf"
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-semibold rounded-lg bg-accent text-accent-foreground hover:bg-accent/90 transition-all shadow-sm hover:shadow-accent/20 cursor-pointer"
+                title="Download the latest uploaded PDF"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download PDF</span>
+              </a>
+
+              {/* Open in New Window */}
+              <a
+                href={`/api/download-resume?inline=1&t=${pdfTimestamp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-medium rounded-lg border border-border bg-sidebar/50 hover:bg-sidebar transition-colors cursor-pointer text-muted hover:text-foreground"
+                title="Open PDF in new browser tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Open Tab</span>
+              </a>
+
+              {/* View Switcher: Live PDF vs Web Profile */}
+              <div className="flex items-center rounded-lg border border-border bg-sidebar/50 p-0.5 text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => setPdfViewMode('preview')}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5",
+                    pdfViewMode === 'preview' 
+                      ? "bg-accent/15 text-accent font-semibold shadow-xs" 
+                      : "text-muted hover:text-foreground"
+                  )}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Document</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPdfViewMode('html')}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5",
+                    pdfViewMode === 'html' 
+                      ? "bg-accent/15 text-accent font-semibold shadow-xs" 
+                      : "text-muted hover:text-foreground"
+                  )}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Profile</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Drag & Drop Upload Zone for admin */}
+          {/* ADMIN ONLY: Cloud Overwrite / PDF Upload Manager */}
           {isAdmin && (
-            <div 
-              onDragOver={(e) => {
-                e.preventDefault()
-                setIsDragOver(true)
-              }}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setIsDragOver(false)
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                  handlePdfUpload(e.dataTransfer.files[0])
-                }
-              }}
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
-                isDragOver 
-                  ? 'border-accent bg-accent/5' 
-                  : uploadStatus === 'success' 
-                  ? 'border-green-500 bg-green-500/5' 
-                  : uploadStatus === 'error' 
-                  ? 'border-red-500 bg-red-500/5' 
-                  : 'border-border bg-sidebar/20'
-              }`}
-            >
-              <input
-                type="file"
-                id="pdf-upload"
-                accept=".pdf"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handlePdfUpload(e.target.files[0])
+            <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-amber-500 font-mono text-xs font-semibold">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Admin Document Manager: Upload & Replace Resume PDF</span>
+                </div>
+                <span className="text-[11px] font-mono text-muted">
+                  Overwrites <code className="text-foreground font-semibold">public/resume.pdf</code> for all visitors
+                </span>
+              </div>
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setIsDragOver(true)
+                }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setIsDragOver(false)
+                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handlePdfUpload(e.dataTransfer.files[0])
                   }
                 }}
-              />
-              <label 
-                htmlFor="pdf-upload"
-                className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer bg-sidebar/20",
+                  isDragOver && "border-accent bg-accent/10 scale-[1.01]",
+                  uploadStatus === 'success' && "border-emerald-500 bg-emerald-500/10",
+                  uploadStatus === 'error' && "border-rose-500 bg-rose-500/10",
+                  uploadStatus === 'idle' && !isDragOver && "border-border hover:border-accent/60 hover:bg-sidebar/40"
+                )}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className={`w-8 h-8 ${isDragOver ? 'text-accent animate-bounce' : 'text-muted'}`} />
-                <span className="text-xs font-mono font-semibold">
-                  {uploadStatus === 'uploading' ? (
-                    <span className="text-accent animate-pulse">Uploading new resume...</span>
-                  ) : uploadStatus === 'success' ? (
-                    <span className="text-green-500">✓ Upload complete (resume.pdf updated)</span>
-                  ) : uploadStatus === 'error' ? (
-                    <span className="text-red-500 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      {uploadError || 'Error uploading file'}
-                    </span>
-                  ) : (
-                    <span>Drag and drop a new PDF here, or <span className="text-accent hover:underline">browse files</span></span>
-                  )}
-                </span>
-                <span className="text-[10px] text-muted font-sans">
-                  This will instantly overwrite the public download target (/public/resume.pdf)
-                </span>
-              </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  id="pdf-upload"
+                  accept="application/pdf,.pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handlePdfUpload(e.target.files[0])
+                    }
+                  }}
+                />
+
+                <div className="flex flex-col items-center justify-center gap-2.5">
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center transition-transform",
+                    isDragOver ? "bg-accent/20 text-accent scale-110" : "bg-code-bg text-muted border border-border"
+                  )}>
+                    <Upload className="w-6 h-6" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-mono font-semibold">
+                      {uploadStatus === 'uploading' ? (
+                        <span className="text-accent animate-pulse">Uploading and publishing PDF...</span>
+                      ) : uploadStatus === 'success' ? (
+                        <span className="text-emerald-500 flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Resume uploaded successfully! Download links and live preview updated.
+                        </span>
+                      ) : uploadStatus === 'error' ? (
+                        <span className="text-rose-500 flex items-center justify-center gap-1.5">
+                          <AlertCircle className="w-4 h-4" />
+                          {uploadError || 'Upload failed'}
+                        </span>
+                      ) : (
+                        <span>
+                          Drag and drop your new PDF here, or <span className="text-accent underline font-bold">browse your files</span>
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[11px] text-muted font-sans">
+                      Accepts standard PDF files (.pdf). Anyone downloading from this portfolio will immediately receive the latest uploaded file.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      fileInputRef.current?.click()
+                    }}
+                    className="mt-1 px-3 py-1.5 text-xs font-mono rounded bg-sidebar hover:bg-code-bg border border-border transition-colors text-foreground cursor-pointer flex items-center gap-1.5"
+                  >
+                    <FileUp className="w-3.5 h-3.5 text-accent" />
+                    <span>Select PDF File</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Stylized CV Layout for presentation */}
-          <div className="border border-border rounded-lg bg-sidebar/5 p-6 sm:p-8 font-sans text-foreground shadow-sm">
+          {/* Document Content: Embedded PDF or Web Profile */}
+          {pdfViewMode === 'preview' ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-mono text-muted px-1">
+                <span className="flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-accent" />
+                  <span>Live Document Preview</span>
+                </span>
+                <button
+                  onClick={() => setPdfTimestamp(Date.now())}
+                  className="flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors"
+                  title="Reload preview"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-border overflow-hidden bg-sidebar/10 shadow-sm relative min-h-[600px]">
+                <iframe
+                  key={pdfTimestamp}
+                  src={`/api/download-resume?inline=1&t=${pdfTimestamp}`}
+                  className="w-full h-[720px] bg-background border-none"
+                  title="Syed Nadirsha Resume PDF Viewer"
+                />
+              </div>
+
+              <div className="text-center pt-2">
+                <a
+                  href="/api/download-resume"
+                  download="Syed_Nadirsha_Resume.pdf"
+                  className="text-xs font-mono text-accent hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Need an offline copy? Click here to download Syed_Nadirsha_Resume.pdf directly.</span>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-border rounded-lg bg-sidebar/5 p-6 sm:p-8 font-sans text-foreground shadow-sm">
+              {/* Stylized CV Layout for presentation */}
             <div className="flex flex-col sm:flex-row justify-between items-start border-b border-border/80 pb-6 gap-4">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Syed Nadirsha</h2>
@@ -691,6 +850,7 @@ export function WorkspaceViewer({
               </div>
             </div>
           </div>
+          )}
         </div>
       )
     }
@@ -715,7 +875,16 @@ export function WorkspaceViewer({
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse flex-shrink-0" title="Unsaved changes" />
           )}
         </div>
-        {isAdmin && activeFile.extension !== 'pdf' && (
+        {activeFile.extension === 'pdf' ? (
+          <a
+            href="/api/download-resume"
+            download="Syed_Nadirsha_Resume.pdf"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-semibold rounded bg-accent text-accent-foreground hover:bg-accent/90 transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download PDF</span>
+          </a>
+        ) : isAdmin && (
           <button
             onClick={onSave}
             disabled={isSaving}

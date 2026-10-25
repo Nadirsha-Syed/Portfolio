@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen, FileText, Code, Mail, User, Plus } from 'lucide-react'
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, FileText, Code, Mail, User, Plus, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileNode } from '@/types'
 
@@ -69,6 +69,7 @@ function FileTreeNode({ node, activeFile, onFileSelect, level, isAdmin, onAddPro
     if (node.extension === 'json') return <Code className="w-4 h-4 text-amber-500" />
     if (node.extension === 'env') return <Mail className="w-4 h-4 text-emerald-500" />
     if (node.extension === 'tsx') return <User className="w-4 h-4 text-purple-500" />
+    if (node.extension === 'pdf') return <FileText className="w-4 h-4 text-rose-500" />
     return <File className="w-4 h-4 text-muted" />
   }
 
@@ -97,18 +98,31 @@ function FileTreeNode({ node, activeFile, onFileSelect, level, isAdmin, onAddPro
           {getIcon()}
           <span className="truncate">{node.name}</span>
         </div>
-        {node.id === 'projects' && isAdmin && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onAddProject?.()
-            }}
-            className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-code-bg rounded text-muted hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
-            title="Add New Project"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {node.extension === 'pdf' && (
+            <a
+              href="/api/download-resume"
+              download="Syed_Nadirsha_Resume.pdf"
+              onClick={(e) => e.stopPropagation()}
+              className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-code-bg rounded text-muted hover:text-accent transition-all cursor-pointer flex items-center justify-center"
+              title="Download PDF Resume"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {node.id === 'projects' && isAdmin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onAddProject?.()
+              }}
+              className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-code-bg rounded text-muted hover:text-foreground transition-all cursor-pointer flex items-center justify-center"
+              title="Add New Project"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       {isExpanded && node.children && (
         <div>
